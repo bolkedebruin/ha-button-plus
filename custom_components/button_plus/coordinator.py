@@ -29,7 +29,10 @@ class ButtonPlusCoordinator(DataUpdateCoordinator):
         self.hub = hub
         self._hass = hass
         self._mqtt_subscribed_buttons = False
-        self._mqtt_topic_buttons = f"buttonplus/{hub.hub_id}/button/+/click"
+        self._mqtt_topic_buttons = [
+            f"buttonplus/{hub.hub_id}/button/+/click",
+            f"buttonplus/{hub.hub_id}/button/+/longpress",
+        ]
         self._mqtt_topic_brightness = f"buttonplus/{hub.hub_id}/brightness/+"
         self._mqtt_topic_page = f"buttonplus/{hub.hub_id}/page/+"
 
@@ -37,14 +40,14 @@ class ButtonPlusCoordinator(DataUpdateCoordinator):
         """Create MQTT subscriptions for buttonplus """
         _LOGGER.debug(f"Initial data fetch from coordinator")
         if not self._mqtt_subscribed_buttons:
-            self.unsubscribe_mqtt = await mqtt.async_subscribe(
-                self._hass,
-                self._mqtt_topic_buttons,
-                self.mqtt_button_callback,
-                0
-            )
-            _LOGGER.debug(f"MQTT subscribed to {self._mqtt_topic_buttons}")
-
+            for topic in self._mqtt_topic_buttons:
+                self.unsubscribe_mqtt = await mqtt.async_subscribe(
+                    self._hass,
+                    topic,
+                    self.mqtt_button_callback,
+                    0
+                )
+                _LOGGER.debug(f"MQTT subscribed to {topic}")
 
         if not self._mqtt_subscribed_buttons:
             self.unsubscribe_mqtt = await mqtt.async_subscribe(
@@ -54,7 +57,6 @@ class ButtonPlusCoordinator(DataUpdateCoordinator):
                 0
             )
             _LOGGER.debug(f"MQTT subscribed to {self._mqtt_topic_brightness}")
-
 
         if not self._mqtt_subscribed_buttons:
             self.unsubscribe_mqtt = await mqtt.async_subscribe(
@@ -104,3 +106,17 @@ class ButtonPlusCoordinator(DataUpdateCoordinator):
             target={"entity_id": entity.entity_id}
         )
 
+    @callback
+    async def mqtt_button_long_press_callback(self, message: ReceiveMessage):
+        # Handle the message here
+        _LOGGER.debug(f"Received message on topic {message.topic}: {message.payload}")
+        match = re.search(r'/(\d+)/long_press', message.topic)
+        btn_id = int(match.group(1)) if match else None
+
+        entity: ButtonEntity = self.hub.button_entities[str(btn_id)]
+
+        await self.hass.services.async_call(
+            "button",
+            'long_press',
+            target={"entity_id": entity.entity_id}
+        )
