@@ -1,0 +1,5 @@
+long_press:
+  description: Long press of a button on a Button+
+  target:
+    entity:
+      domain: button_plus
