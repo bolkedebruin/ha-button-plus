@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 from functools import cached_property
-from typing import Any, final
+from typing import Any
 
 from homeassistant.components.button import ButtonEntity, ButtonDeviceClass
 from homeassistant.config_entries import ConfigEntry
@@ -61,7 +61,7 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         SERVICE_LONG_PRESS,
         {},
-        "_async_long_press_action",
+        "async_long_press",
     )
 
 
@@ -128,13 +128,12 @@ class ButtonPlusButton(ButtonEntity):
         _LOGGER.debug(f"async press from mqtt button: {self._btn_id}")
         self._attr_click_type = "single"
 
-    @final
-    async def _async_long_press_action(self) -> None:
+    async def async_long_press(self) -> None:
         """Handle the button long press."""
         _LOGGER.debug(f"async long press from mqtt button: {self._btn_id}")
+        self._attr_click_type = "long"
         self.__set_state(dt_util.utcnow().isoformat())
         self.async_write_ha_state()
-        self._attr_click_type = "long"
 
     @property
     def state_attributes(self) -> dict[str, Any] | None:
