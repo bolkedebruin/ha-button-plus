@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from functools import cached_property
-from typing import Any
+from typing import Any, final
 
 from homeassistant.components.button import ButtonEntity, ButtonDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity_component import EntityComponent
-from homeassistant.helpers.entity_platform import AddEntitiesCallback, async_get_current_platform
-from homeassistant.helpers.typing import ConfigType
-from homeassistant.helpers.service import verify_domain_control
+from homeassistant.helpers.entity_platform import (
+    AddEntitiesCallback,
+    async_get_current_platform,
+)
+from homeassistant.util import dt as dt_util
 
 from .button_plus_api.model import Connector, ConnectorEnum
 from .const import DOMAIN
@@ -60,7 +61,7 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         SERVICE_LONG_PRESS,
         {},
-        "async_long_press",
+        "_async_long_press_action",
     )
 
 
@@ -127,9 +128,12 @@ class ButtonPlusButton(ButtonEntity):
         _LOGGER.debug(f"async press from mqtt button: {self._btn_id}")
         self._attr_click_type = "single"
 
-    async def async_long_press(self) -> None:
+    @final
+    async def _async_long_press_action(self) -> None:
         """Handle the button long press."""
         _LOGGER.debug(f"async long press from mqtt button: {self._btn_id}")
+        self.__set_state(dt_util.utcnow().isoformat())
+        self.async_write_ha_state()
         self._attr_click_type = "long"
 
     @property
